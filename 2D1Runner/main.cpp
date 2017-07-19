@@ -1,14 +1,20 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
-
 #define W_W 800
 #define W_H 600
 #define FLOOR_HEIGHT 200
 #define FLOOR_Y W_H - FLOOR_HEIGHT
+
+#define RATIO 100
+
 #define PLAYER_H 30
 #define PLAYER_OFFSET 200
-#define RATIO 100
+
+#define ENERGY_MAX 100
+#define ENERGY_DRAIN 20
+#define ENERGY_REGEN 10
+#define ENERGY_BAR_W 150
 
 #define MAX_FENCES 10
 #define MIN_BETWEEN_F 100
@@ -46,7 +52,7 @@ int main()
 	{
 		scoreText.setFont(font);
 		scoreText.setCharacterSize(24);
-		scoreText.setColor(sf::Color::Blue);
+		scoreText.setColor(sf::Color::Black);
 		scoreText.setPosition(10, 10);
 		
 		scoreText.setString(std::to_string(score));
@@ -58,9 +64,14 @@ int main()
 	
 	sf::Vector2f p_pos(PLAYER_OFFSET, FLOOR_Y - PLAYER_H * 3);
 	sf::Vector2f p_speed(200.f, 0.f);
-	sf::Vector2f g(1.f, 9.8f * RATIO);
+	sf::Vector2f g(3.f, 9.8f * RATIO);
 	bool p_jump = false;
+
+	float p_energy = ENERGY_MAX;
 	bool p_phase = false;
+	sf::RectangleShape energyBar(sf::Vector2f(ENERGY_BAR_W, 15));
+	energyBar.setPosition(10, 40);
+	energyBar.setFillColor(sf::Color::Green);
 
 	//obstables
 	std::vector<float> fences;
@@ -122,6 +133,22 @@ int main()
 			p_jump = false;
 			p_pos.y = FLOOR_Y - PLAYER_H;
 			p_speed.y = 0.f;
+		}
+
+		// update energy
+		if(p_phase)
+		{
+			float energyFrameDrain = ENERGY_DRAIN * elapsed.asSeconds();
+			if(p_energy < energyFrameDrain)
+				p_phase = false;
+			else
+				p_energy -= energyFrameDrain;
+		}
+		else
+		{
+			p_energy += ENERGY_REGEN * elapsed.asSeconds();
+			if(p_energy > ENERGY_MAX)
+				p_energy = ENERGY_MAX;
 		}
 
 		// update fences
@@ -201,12 +228,19 @@ int main()
 			window.draw(wall);
 		}
 
+		// display hud
 		if(hud)
 		{
 			scoreText.setString(std::to_string(score));
 			window.setView(hudView);
 			window.draw(scoreText);
 		}
+
+		// display energy bar
+		sf::Vector2f barSize = energyBar.getSize();
+		barSize.x = p_energy / ENERGY_MAX * ENERGY_BAR_W;
+		energyBar.setSize(barSize);
+		window.draw(energyBar);
 
         window.display();
     }
