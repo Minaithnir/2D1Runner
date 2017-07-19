@@ -1,4 +1,6 @@
+#include <iostream>
 #include <SFML/Graphics.hpp>
+
 
 #define W_W 800
 #define W_H 600
@@ -8,24 +10,47 @@
 #define PLAYER_OFFSET 200
 #define RATIO 100
 
-#define MAX_FENCES 5
+#define MAX_FENCES 10
 #define MIN_BETWEEN_F 100
 #define MAX_BETWEEN_F 500
+#define SCORE_FENCE 1
 
-#define MAX_WALLS 5
-#define MIN_BETWEEN_W 100
-#define MAX_BETWEEN_W 1000
+#define MAX_WALLS 10
+#define MIN_BETWEEN_W 50
+#define MAX_BETWEEN_W 1500
+#define SCORE_WALL 2
 
 int main()
 {
 	// Window && view
     sf::RenderWindow window(sf::VideoMode(W_W, W_H), "2+1D Runner");
 	sf::View camera(sf::FloatRect(0, 0, W_W, W_H));
+	sf::View hudView(sf::FloatRect(0, 0, W_W, W_H));
 
 	// floor
 	sf::RectangleShape floor(sf::Vector2f(W_W, FLOOR_HEIGHT));
 	floor.setPosition(0, FLOOR_Y);
 	floor.setFillColor(sf::Color::Black);
+
+	// score
+	bool hud = true;
+	sf::Font font;
+	if (!font.loadFromFile("Roboto-Regular.ttf"))
+	{
+		hud = false;
+		std::cerr << "Err : Unable to load font. No HUD info available" << std::endl;
+	}
+	int score = 0;
+	sf::Text scoreText;
+	if(hud)
+	{
+		scoreText.setFont(font);
+		scoreText.setCharacterSize(24);
+		scoreText.setColor(sf::Color::Blue);
+		scoreText.setPosition(10, 10);
+		
+		scoreText.setString(std::to_string(score));
+	}
 	
 	// player
 	sf::RectangleShape player(sf::Vector2f(PLAYER_H, PLAYER_H));
@@ -39,11 +64,13 @@ int main()
 
 	//obstables
 	std::vector<float> fences;
+	float lastScoredFence = 0;
 	fences.push_back(W_W);
 	sf::RectangleShape fence(sf::Vector2f(PLAYER_H / 3, PLAYER_H));
 	fence.setFillColor(sf::Color::Red);
 
 	std::vector<float> walls;
+	float lastScoredWall = 0;
 	walls.push_back(W_W);
 	sf::RectangleShape wall(sf::Vector2f(PLAYER_H, PLAYER_H * 5));
 	wall.setFillColor(sf::Color::Black);
@@ -101,6 +128,12 @@ int main()
 		auto it = fences.begin();
 		while(it != fences.end())
 		{
+			if(*it < (p_pos.x - fence.getSize().x) && *it > lastScoredFence)
+			{
+				score += SCORE_FENCE;
+				lastScoredFence = *it;
+			}
+
 			if(*it < (p_pos.x - PLAYER_OFFSET - fence.getSize().x))
 				it = fences.erase(it);
 			++it;
@@ -117,6 +150,12 @@ int main()
 		it = walls.begin();
 		while(it != walls.end())
 		{
+			if(*it < (p_pos.x - wall.getSize().x) && *it > lastScoredWall)
+			{
+				score += SCORE_WALL;
+				lastScoredWall = *it;
+			}
+
 			if(*it < (p_pos.x - PLAYER_OFFSET - wall.getSize().x))
 				it = walls.erase(it);
 			++it;
@@ -139,7 +178,7 @@ int main()
 		floor.setPosition(p_pos.x - PLAYER_OFFSET, FLOOR_Y);
 		window.draw(floor);
 		
-		player.setPosition(p_pos); 
+		player.setPosition(p_pos);
 		window.draw(player);
 
 		for(auto it = fences.begin(); it != fences.end(); ++it)
@@ -160,6 +199,13 @@ int main()
 				wallColor.a = 125;
 			wall.setFillColor(wallColor);
 			window.draw(wall);
+		}
+
+		if(hud)
+		{
+			scoreText.setString(std::to_string(score));
+			window.setView(hudView);
+			window.draw(scoreText);
 		}
 
         window.display();
